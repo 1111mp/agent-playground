@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import AsyncGenerator, Dict, Optional, Union
+from dataclasses import dataclass
+from typing import Any, AsyncGenerator, Dict, Optional, Union
 
 
 class LLM(ABC):
@@ -26,3 +27,15 @@ class LLM(ABC):
     ) -> AsyncGenerator[Union[str, Dict], None]:
         """流式聊天"""
         pass
+
+
+@dataclass
+class ToolFunction:
+    name: str
+    arguments: Dict[str, Any]
+
+
+@dataclass
+class ToolCall:
+    id: str
+    function: ToolFunction

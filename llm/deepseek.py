@@ -80,6 +80,8 @@ class DeepSeekLLM(LLM):
 
         # 用于累积 tool calls（支持多个 tool call）
         tool_calls: List[Dict] = []
+        # 记录哪个 tool_call 是 attempt_completion
+        attempt_completion_index = None
 
         async for chunk in response:
             if not chunk.choices:
@@ -116,18 +118,25 @@ class DeepSeekLLM(LLM):
                     # 累积 function name（通常只出现一次）
                     if tool_delta.function and tool_delta.function.name is not None:
                         tc["function"]["name"] = tool_delta.function.name
+                        # 关键：检测是否为 attempt_completion
+                        if tool_delta.function.name == "attempt_completion":
+                            attempt_completion_index = idx
 
                     # 关键：累积 arguments（会分很多小块传来，必须 += 拼接）
                     if tool_delta.function and tool_delta.function.arguments:
-                        tc["function"]["arguments"] += tool_delta.function.arguments
+                        new_part = tool_delta.function.arguments
+                        tc["function"]["arguments"] += new_part
+
+                        # 如果当前 tool 是 attempt_completion，则实时 yield 新增部分
+                        if attempt_completion_index == idx and new_part:
+                            yield {"type": "completion_stream", "content": new_part}
 
         # ====================== 流式结束后处理 ======================
         # 检查是否有有效的 tool call
         valid_tool_calls = [
-            tc
-            for tc in tool_calls
-            if tc.get("function", {}).get("name")  # 有函数名才算有效
+            tc for tc in tool_calls if tc.get("function", {}).get("name")
         ]
 
         if valid_tool_calls:
+            # TODO 将输出类型化，而不是直接返回 dict
             yield {"type": "tool_calls", "tool_calls": valid_tool_calls}

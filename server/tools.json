@@ -1,0 +1,25 @@
+[
+  {
+    "name": "get_forecast",
+    "description": "weather: Get weather forecast for a location.\n\nArgs:\n    latitude: Latitude of the location\n    longitude: Longitude of the location\n",
+    "strict": false,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "latitude": {
+          "type": "number",
+          "description": "",
+          "title": "Latitude"
+        },
+        "longitude": {
+          "type": "number",
+          "description": "",
+          "title": "Longitude"
+        }
+      },
+      "required": ["latitude", "longitude"],
+      "additionalProperties": false
+    },
+    "code": "\ndef run(latitude: float, longitude: float) -> str:\n    \"\"\"Get weather forecast for a location.\n\n    Args:\n        latitude: Latitude of the location\n        longitude: Longitude of the location\n    \"\"\"\n    # First get the forecast grid endpoint\n    points_url = f\"{NWS_API_BASE}/points/{latitude},{longitude}\"\n    points_data = make_nws_request(points_url)\n\n    if not points_data:\n        return \"Unable to fetch forecast data for this location.\"\n\n    # Get the forecast URL from the points response\n    forecast_url = points_data[\"properties\"][\"forecast\"]\n    forecast_data = make_nws_request(forecast_url)\n\n    if not forecast_data:\n        return \"Unable to fetch detailed forecast.\"\n\n    # Format the periods into a readable forecast\n    periods = forecast_data[\"properties\"][\"periods\"]\n    forecasts = []\n    for period in periods[:5]:  # Only show next 5 periods\n        forecast = f\"\"\"\n{period[\"name\"]}:\nTemperature: {period[\"temperature\"]}°{period[\"temperatureUnit\"]}\nWind: {period[\"windSpeed\"]} {period[\"windDirection\"]}\nForecast: {period[\"detailedForecast\"]}\n\"\"\"\n        forecasts.append(forecast)\n\n    return \"\\n---\\n\".join(forecasts)\n"
+  }
+]
